@@ -57,6 +57,8 @@ copy_defconfig () {
 make_menuconfig () {
 	cd "${DIR}/KERNEL" || exit
 	make ARCH=${KERNEL_ARCH} CROSS_COMPILE="${CC}" oldconfig
+	echo "Running menuconfig. If this does not work, cancel and try running it manually, then resume buld with this line commented out"
+	echo "make ARCH=${KERNEL_ARCH} CROSS_COMPILE=\"\${CC}\" menuconfig"
 	make ARCH=${KERNEL_ARCH} CROSS_COMPILE="${CC}" menuconfig
 	if [ ! -f "${DIR}/.yakbuild" ] ; then
 		cp -v .config "${DIR}/patches/defconfig"
@@ -200,8 +202,22 @@ fi
 
 #unset FULL_REBUILD
 FULL_REBUILD=1
+#unset DOWNLOAD_LINUX_ZIP
+DOWNLOAD_LINUX_ZIP=1
 if [ "${FULL_REBUILD}" ] ; then
-	/bin/sh -e "${DIR}/scripts/git.sh" || { exit 1 ; }
+	if [ "${DOWNLOAD_LINUX_ZIP}" ] ; then
+		#Download from https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tag/?h=v5.15.119
+		wget "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/snapshot/linux-5.15.119.tar.gz"
+		tar zxvf "linux-5.15.119.tar.gz"
+		rm -rf "${DIR}/KERNEL"
+		mv linux-5.15.119 "${DIR}/KERNEL"
+		cd "${DIR}/KERNEL"
+		git init
+		git add .
+		git commit -m "Kernel v5.15.119"
+	else
+		/bin/sh -e "${DIR}/scripts/git.sh" || { exit 1 ; }
+	fi
 
 	if [ "${RUN_BISECT}" ] ; then
 		/bin/sh -e "${DIR}/scripts/bisect.sh" || { exit 1 ; }
